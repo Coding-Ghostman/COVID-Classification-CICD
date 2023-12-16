@@ -67,4 +67,3 @@ history = model.fit(
 # Save the model using pickle
 with open('covid_classification_model.pkl', 'wb') as model_file:
     pickle.dump(model, model_file)
-clear
