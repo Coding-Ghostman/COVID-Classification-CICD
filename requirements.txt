@@ -1,6 +1,5 @@
 tensorflow
 pandas 
-dvc
 notebook
 numpy
 matplotlib
@@ -14,3 +13,4 @@ types-PyYAML
 scipy
 Flask
 Flask-Cors
+scikit-learn
