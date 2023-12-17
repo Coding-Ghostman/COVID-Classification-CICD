@@ -16,7 +16,7 @@ tf.random.set_seed(seed)
 data_dir = 'data'
 train_dir = data_dir
 
-# Define parameters
+# Define parameters90
 batch_size = 32
 img_size = (224, 224)
 epochs = 10
@@ -54,7 +54,6 @@ model.add(base_model)
 model.add(layers.GlobalAveragePooling2D())
 model.add(layers.Dense(1, activation='sigmoid'))
 
-# Compile the model
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # Train the model

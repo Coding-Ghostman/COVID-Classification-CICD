@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>COVID-19 Image Classification</title>
+</head>
+<body>
+    <div class="container">
+        <h1>COVID-19 Image Classification</h1>
+        <form action="/" method="post" enctype="multipart/form-data">
+            <input type="file" name="photo" accept=".jpg, .jpeg, .png" required>
+            <button type="submit">Upload</button>
+        </form>
+        {% if filename %}
+        <div class="result">
+            <p>Uploaded Image:</p>
+            <img src="{{ url_for('static', filename='upload/' + filename) }}" alt="Uploaded Image">
+            {% if result %}
+            <p>Result: {{ result }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
