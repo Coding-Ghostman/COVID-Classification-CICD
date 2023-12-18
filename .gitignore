@@ -1,3 +1,4 @@
 Data 
-Dockerfile
 .dockerignore
+__pycache__
+static/upload

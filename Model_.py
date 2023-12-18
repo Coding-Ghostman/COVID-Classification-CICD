@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, transforms, models
 import os
 from PIL import Image
+import pickle
 
 # Check if GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -95,3 +96,10 @@ for epoch in range(num_epochs):
 
 # Save the trained model
 torch.save(model.state_dict(), "covid_classifier.pth")
+
+# Save the trained model as a pickle file
+model.eval()
+with torch.no_grad():
+    example_input = torch.randn(1, 3, 256, 256).to(device)
+    traced_model = torch.jit.trace(model, example_input)
+    pickle.dump(traced_model, open("Model/covid_classifier.pkl", "wb"))
