@@ -1,4 +1,5 @@
-tensorflow
+torch
+torchvision 
 pandas 
 notebook
 numpy
@@ -11,6 +12,8 @@ ensure==1.0.2
 joblib
 types-PyYAML
 scipy
-Flask
-Flask-Cors
+Flask==3.0.0
+Flask-Uploads==0.2.1
+Flask-Cors==3.0.10
+werkzeug==3.0.1
 scikit-learn

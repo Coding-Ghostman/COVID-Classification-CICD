@@ -1,11 +1,11 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request
 from flask_uploads import UploadSet, configure_uploads, IMAGES
 import numpy as np
-import pickle
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.densenet import preprocess_input
+from PIL import Image
+from torchvision import transforms
+import torch
+from torchvision import models
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -15,19 +15,31 @@ photos = UploadSet("photos", IMAGES)
 app.config["UPLOADED_PHOTOS_DEST"] = "upload"
 configure_uploads(app, photos)
 
-# Load the trained model using pickle
-with open('covid_classification_model.pkl', 'rb') as model_file:
-    model = pickle.load(model_file)
+# Load the trained DenseNet model
+model = models.densenet121(pretrained=False)
+num_classes = 2  # Modify this based on the number of classes in your model
+model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
+model.load_state_dict(torch.load("Model/covid_classifier.pth", map_location=torch.device("cpu")))
+model.eval()
 
 # Function to process and predict the uploaded image
 def predict_image(file_path):
-    img = image.load_img(file_path, target_size=(224, 224))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
+    transform = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+    ])
 
-    prediction = model.predict(img_array)
-    return prediction[0][0]
+    img = Image.open(file_path).convert("RGB")
+    img = transform(img)
+    img = img.unsqueeze(0)  # Add batch dimension
+
+    with torch.no_grad():
+        output = model(img)
+
+    probabilities = torch.softmax(output, dim=1)
+    prediction = probabilities[:, 1].item()  # Probability of being in class 1 (COVID)
+    
+    return prediction
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -35,19 +47,19 @@ def index():
         photo = request.files["photo"]
         if photo:
             filename = secure_filename(photo.filename)
-            file_path = os.path.join("upload", filename)
+            file_path = os.path.join("static/upload", filename)
             photo.save(file_path)
 
             # Perform prediction
             prediction = predict_image(file_path)
 
             # Display the result
-            result = "COVID-19 Positive" if prediction > 0.5 else "COVID-19 Negative"
+            result = "COVID-19 Positive" if prediction < 0.7 else "COVID-19 Negative"
 
             return render_template("index.html", filename=filename, result=result)
 
     return render_template("index.html", filename=None, result=None)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080) #local host
-    # app.run(host='0.0.0.0', port=8080) #for AWS
+    app.run(host='0.0.0.0', port=8080)  # Local host
+    # app.run(host='0.0.0.0', port=8080)  # For AWS
