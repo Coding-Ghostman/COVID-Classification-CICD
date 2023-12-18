@@ -1,44 +1,30 @@
 import os
-from flask import Flask, render_template, request
-from flask_uploads import UploadSet, configure_uploads, IMAGES
-import numpy as np
+from flask import Flask, render_template, request, redirect, url_for
 from PIL import Image
-from torchvision import transforms
-import torch
-from torchvision import models
+import joblib
 from werkzeug.utils import secure_filename
+import numpy as np
 
 app = Flask(__name__)
 
-# Configure file upload
-photos = UploadSet("photos", IMAGES)
-app.config["UPLOADED_PHOTOS_DEST"] = "upload"
-configure_uploads(app, photos)
+# Set the upload folder
+upload_folder = "static/upload"
+if not os.path.exists(upload_folder):
+    os.makedirs(upload_folder)
+app.config["UPLOAD_FOLDER"] = upload_folder
 
-# Load the trained DenseNet model
-model = models.densenet121(pretrained=False)
-num_classes = 2  # Modify this based on the number of classes in your model
-model.classifier = torch.nn.Linear(model.classifier.in_features, num_classes)
-model.load_state_dict(torch.load("Model/covid_classifier.pth", map_location=torch.device("cpu")))
-model.eval()
+# Load the pickled model
+with open("Model/covid_classifier.pkl", "rb") as model_file:
+    model = joblib.load(model_file)
 
 # Function to process and predict the uploaded image
 def predict_image(file_path):
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.ToTensor(),
-    ])
-
     img = Image.open(file_path).convert("RGB")
-    img = transform(img)
-    img = img.unsqueeze(0)  # Add batch dimension
+    img = np.array(img.resize((256, 256))) / 255.0  # Normalize pixel values
+    img = img.reshape(1, -1)
 
-    with torch.no_grad():
-        output = model(img)
+    prediction = model.predict_proba(img)[:, 1].item()  # Probability of being in class 1 (COVID)
 
-    probabilities = torch.softmax(output, dim=1)
-    prediction = probabilities[:, 1].item()  # Probability of being in class 1 (COVID)
-    
     return prediction
 
 @app.route("/", methods=["GET", "POST"])
@@ -47,7 +33,7 @@ def index():
         photo = request.files["photo"]
         if photo:
             filename = secure_filename(photo.filename)
-            file_path = os.path.join("static/upload", filename)
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             photo.save(file_path)
 
             # Perform prediction
@@ -55,7 +41,6 @@ def index():
 
             # Display the result
             result = "COVID-19 Positive" if prediction < 0.7 else "COVID-19 Negative"
-
             return render_template("index.html", filename=filename, result=result)
 
     return render_template("index.html", filename=None, result=None)
